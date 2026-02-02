@@ -4,7 +4,7 @@
 
 ## 📋 Description
 
-Ce projet contient un script Bash complet pour installer et configurer automatiquement tous les outils DevOps nécessaires sur votre poste de travail. Que vous soyez sur Linux, macOS ou Windows, ce script adapte l'installation selon votre système d'exploitation.
+Ce projet contient un script Bash complet pour installer et configurer automatiquement tous les outils DevOps nécessaires sur votre poste de travail Debian.
 
 ## ✨ Fonctionnalités
 
