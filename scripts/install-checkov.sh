@@ -5,52 +5,33 @@
 
 set -euo pipefail
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
-# Print functions
-print_success() {
-    echo -e "${GREEN}✓ $1${NC}"
-}
-
-print_error() {
-    echo -e "${RED}✗ $1${NC}"
-}
-
-print_info() {
-    echo -e "${BLUE}ℹ $1${NC}"
-}
-
-# Check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
-
-# Install Checkov
 install_checkov() {
     print_info "Installing Checkov..."
-    
+
     if command_exists checkov; then
         print_success "Checkov is already installed: $(checkov --version)"
         return 0
     fi
 
-    # Install prerequisites
-    sudo apt-get update -qq
+    ensure_apt_updated
     sudo apt-get install -y python3 python3-pip python3-venv
 
-    # Install Checkov via pip
-    pip3 install --user checkov
+    python3 -m venv ~/.checkov_venv
+    source ~/.checkov_venv/bin/activate
+    pip install --upgrade pip
+    pip install checkov
+    deactivate
 
-    # Add to PATH if not already there
-    if ! command_exists checkov; then
-        echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-        export PATH="$HOME/.local/bin:$PATH"
+    if [ -f "$HOME/.bashrc" ] && ! grep -q "checkov_venv" ~/.bashrc 2>/dev/null; then
+        echo 'export PATH="$HOME/.checkov_venv/bin:$PATH"' >> ~/.bashrc
     fi
+    if [ -f "$HOME/.zshrc" ] && ! grep -q "checkov_venv" ~/.zshrc 2>/dev/null; then
+        echo 'export PATH="$HOME/.checkov_venv/bin:$PATH"' >> ~/.zshrc
+    fi
+    export PATH="$HOME/.checkov_venv/bin:$PATH"
 
     if command_exists checkov; then
         print_success "Checkov installed successfully: $(checkov --version)"
@@ -60,5 +41,4 @@ install_checkov() {
     fi
 }
 
-# Main execution
 install_checkov

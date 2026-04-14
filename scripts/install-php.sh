@@ -5,32 +5,18 @@
 
 set -euo pipefail
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
-# Print functions
-print_success() {
-    echo -e "${GREEN}✓ $1${NC}"
+get_distro_id() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        echo "$ID"
+    else
+        echo "unknown"
+    fi
 }
 
-print_error() {
-    echo -e "${RED}✗ $1${NC}"
-}
-
-print_info() {
-    echo -e "${BLUE}ℹ $1${NC}"
-}
-
-# Check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
-
-# Install PHP
 install_php() {
     print_info "Installing PHP..."
 
@@ -39,17 +25,22 @@ install_php() {
         return 0
     fi
 
-    # Install prerequisites
-    sudo apt-get update -qq
-    sudo apt-get install -y software-properties-common
-    sudo add-apt-repository -y ppa:ondrej/php
-    sudo apt-get update -qq
+    ensure_apt_updated
+    sudo apt-get install -y ca-certificates curl gnupg software-properties-common lsb-release
 
-    # Install PHP and common extensions
-    sudo apt-get install -y php8.2 php8.2-cli php8.2-curl php8.2-mbstring php8.2-xml php8.2-zip php8.2-mysql php8.2-pgsql php8.2-sqlite3
+    local distro
+    distro=$(get_distro_id)
 
-    # Create symbolic link for php command
-    sudo update-alternatives --set php /usr/bin/php8.2
+    if [ "$distro" = "ubuntu" ] || [ "$distro" = "linuxmint" ] || [ "$distro" = "pop" ]; then
+        sudo add-apt-repository -y ppa:ondrej/php
+        sudo apt-get update -qq
+        sudo apt-get install -y php8.3 php8.3-cli php8.3-curl php8.3-mbstring php8.3-xml php8.3-zip php8.3-mysql php8.3-pgsql php8.3-sqlite3 php8.3-gd php8.3-intl php8.3-bcmath
+    else
+        curl -fsSL https://packages.sury.org/php/apt.gpg | sudo gpg --dearmor -o /usr/share/keyrings/sury-php.gpg
+        echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/sury-php.list
+        sudo apt-get update -qq
+        sudo apt-get install -y php8.3 php8.3-cli php8.3-curl php8.3-mbstring php8.3-xml php8.3-zip php8.3-mysql php8.3-pgsql php8.3-sqlite3 php8.3-gd php8.3-intl php8.3-bcmath
+    fi
 
     if command_exists php; then
         print_success "PHP installed successfully: $(php --version | head -n1)"
@@ -59,5 +50,4 @@ install_php() {
     fi
 }
 
-# Main execution
 install_php

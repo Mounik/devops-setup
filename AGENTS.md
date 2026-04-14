@@ -1,200 +1,79 @@
 # AGENTS.md
 
-## Script d'Installation des Outils DevOps
+## DevOps Tools Installation Script
 
 ### Overview
-Script d'automatisation pour l'installation et la configuration de l'ensemble des outils DevOps essentiels utilisés dans le projet.
+Script d'automatisation modulaire pour l'installation et la configuration des outils DevOps sur Debian/Ubuntu et dérivés.
 
-### Outils à Installer
+### Architecture
 
-#### 1. Outils de Version Control
-- **Git**: Système de contrôle de version distribué
-- **GitHub CLI**: Interface en ligne de commande pour GitHub
+- **`install-devops-tools.sh`** : Script orchestrateur principal avec gestion des packs, dépendances, et résumé d'installation
+- **`scripts/common.sh`** : Fonctions partagées (couleurs, print, command_exists, ensure_apt_updated)
+- **`scripts/install-<outil>.sh`** : Script individuel par outil, source `common.sh`
 
-#### 2. Outils de Conteneurisation
-- **Docker**: Plateforme de conteneurisation
-- **Docker Compose**: Orchestration de conteneurs multi-conteneurs
-- **Kubernetes**: Orchestration de conteneurs (kubectl)
+### Conventions de Code
 
-#### 3. Outils CI/CD
-- **Jenkins**: Serveur d'intégration continue
-- **GitLab CI**: Pipeline d'intégration continue
-- **GitHub Actions**: Workflows d'automatisation
+- Chaque script individuel :
+  - Commence par `set -euo pipefail`
+  - Source `common.sh` pour les fonctions partagées
+  - Utilise `command_exists` pour vérifier si l'outil est déjà installé
+  - Utilise `ensure_apt_updated` pour éviter les `apt-get update` répétés
+  - Utilise un répertoire temporaire (`mktemp -d`) pour les téléchargements
+  - Vérifie l'installation après chaque étape
 
-#### 4. Infrastructure as Code
-- **Terraform**: Gestion d'infrastructure
-- **Ansible**: Automatisation et configuration
-- **Pulumi**: Infrastructure as Code avec langages de programmation
+- Script principal :
+  - Gère les dépendances via le tableau `DEPENDENCIES`
+  - Déduplique les outils si plusieurs packs se chevauchent
+  - Continue sur erreur avec `--continue-on-error`
+  - Affiche un résumé des succès/échecs
 
-#### 5. Monitoring et Logging
-- **Prometheus**: Système de monitoring
-- **Grafana**: Visualisation de métriques
-- **ELK Stack**: Elasticsearch, Logstash, Kibana
+### Outils Installes (30 outils)
 
-#### 6. Cloud CLI Tools
-- **AWS CLI**: Interface Amazon Web Services
-- **Azure CLI**: Interface Microsoft Azure
-- **gcloud**: Interface Google Cloud Platform
+#### Conteneurisation & Orchestration
+- docker, kubectl (v1.32), helm
 
-#### 7. Outils de Sécurité
-- **Vault**: Gestion de secrets
-- **OpenSCAP**: Outils de scan de sécurité
-- **Trivy**: Scanner de vulnérabilités
+#### Cloud & IaC
+- terraform, ansible (venv), aws-cli v2, azure-cli, gcloud
 
-#### 8. Outils de Réseau
-- **k6**: Testing de performance
-- **Postman**: Testing d'API
-- **Wireshark**: Analyse réseau
+#### Securite
+- vault, trivy, checkov (venv)
 
-#### 9. Outils de Terminal et Interface
-- **Nerd Fonts**: Polices avec icônes pour terminaux
-- **Oh My Zsh**: Framework de configuration Zsh
-- **Starship**: Prompt minimaliste et personnalisable
-- **Tmux**: Multiplexeur de terminal
+#### Testing
+- k6, newman (npm)
 
-#### 10. Langages de Développement et Gestionnaires de Paquets
-- **Node.js**: Runtime JavaScript avec npm
-- **PHP**: Langage de script web avec extensions
-- **Python**: Python 3 avec pip gestionnaire de paquets
-- **uv**: Installateur Python ultra-rapide d'Astral
-- **Composer**: Gestionnaire de paquets PHP
-- **Yarn**: Gestionnaire de paquets JavaScript alternatif
-- **NVM**: Node Version Manager pour gérer multiples versions Node.js
-- **Go**: Langage de programmation Go avec toolchain
+#### Langages
+- nodejs (NodeSource LTS), rust (rustup), php 8.3 (sury/PPA), python3 + uv, go (derniere version), nvm
 
-### Structure du Script
+#### Gestionnaires
+- composer (necessite php), yarn (npm)
 
+#### Utilitaires
+- git, gh, jq, yq, htop, tmux, starship, oh-my-zsh, nerd-fonts
+
+### Dependances entre Outils
+- `composer` -> `php`
+- `newman` -> `nodejs`
+- `yarn` -> `nodejs`
+
+### Packs Disponibles
+- `tools`: git docker gh kubectl terraform aws-cli ansible helm jq yq
+- `security`: vault trivy checkov
+- `testing`: k6 newman
+- `languages`: nodejs rust php python composer yarn nvm go
+- `essential`: git docker kubectl terraform ansible
+- `utils`: jq yq htop tmux starship
+- `shell`: oh-my-zsh
+- `fonts`: nerd-fonts
+- `cloud`: aws-cli azure-cli gcloud
+- `full`: tous les outils
+
+### Systemes Supportes
+Debian/Ubuntu et derives (Linux Mint, Pop!_OS) uniquement.
+
+### Tests
+Pour valider : `./install-devops-tools.sh --dry-run full`
+
+### Lint
 ```bash
-#!/bin/bash
-
-# install-devops-tools.sh
-# Script d'installation automatisée des outils DevOps
-
-set -e
-
-# Fonctions d'installation
-install_git() {
-    echo "Installation de Git..."
-    # Commandes d'installation
-}
-
-install_docker() {
-    echo "Installation de Docker..."
-    # Commandes d'installation
-}
-
-# Fonction principale
-main() {
-    echo "Début de l'installation des outils DevOps..."
-
-    # Vérification du système
-    check_system
-
-    # Installation séquentielle des outils
-    install_git
-    install_docker
-    install_nodejs
-    install_php
-    install_python
-    # ... autres installations
-
-    echo "Installation terminée!"
-}
-
-main "$@"
+shellcheck install-devops-tools.sh scripts/*.sh
 ```
-
-### Configuration Post-Installation
-
-#### Variables d'Environnement
-- Configuration des PATH pour chaque outil
-- Variables d'environnement pour les clés API
-
-#### Fichiers de Configuration
-- `.bashrc` ou `.zshrc` modifications
-- Fichiers de configuration par outil
-- Scripts d'initialisation
-
-### Validation
-
-#### Tests de Vérification
-```bash
-# Tests de fonctionnalité
-test_git_installation() {
-    git --version
-}
-
-test_docker_installation() {
-    docker --version
-    docker run hello-world
-}
-```
-
-### Maintenance
-
-#### Mises à Jour
-- Script de mise à jour automatique
-- Vérification des versions
-- Nettoyage des anciennes installations
-
-### Documentation
-
-#### Logs d'Installation
-- Fichier de log détaillé
-- Rapport d'installation
-- Gestion des erreurs
-
-### Sécurité
-
-#### Bonnes Pratiques
-- Vérification des checksums
-- Installation depuis sources officielles
-- Permissions appropriées
-- Isolation des environnements
-
-### Personnalisation
-
-#### Flags et Options
-- `--dry-run`: Simulation sans installation
-- `--tools-only`: Installation d'outils spécifiques
-- `--config-only`: Configuration uniquement
-- `--version`: Affichage des versions installées
-
-### Exemples d'Utilisation
-
-```bash
-# Installation complète
-./install-devops-tools.sh
-
-# Installation sélective
-./install-devops-tools.sh git docker kubectl terraform aws-cli ansible helm
-
-# Installation des langages de développement
-./install-devops-tools.sh nodejs php python uv nvm go
-
-# Simulation
-./install-devops-tools.sh --dry-run
-```
-
-### Dépannage
-
-#### Problèmes Courants
-- Conflits de versions
-- Problèmes de permissions
-- Dépendances manquantes
-- Configuration réseau
-
-#### Solutions
-- Mode verbose pour debugging
-- Rollback automatique en cas d'erreur
-- Logs détaillés pour investigation
-
-### Roadmap
-
-#### Améliorations Futures
-- Support multi-plateformes (Linux, macOS, Windows)
-- Interface interactive
-- Gestionnaire de paquets intégré
-- Tests automatisés post-installation
-- Support des versions spécifiques pour chaque langage
-- Configuration automatique des environnements de développement

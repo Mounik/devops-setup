@@ -5,32 +5,13 @@
 
 set -euo pipefail
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
-# Print functions
-print_success() {
-    echo -e "${GREEN}✓ $1${NC}"
+get_latest_go_version() {
+    curl -sL 'https://go.dev/VERSION?m=text' | head -1 | sed 's/go//' || echo "1.24.1"
 }
 
-print_error() {
-    echo -e "${RED}✗ $1${NC}"
-}
-
-print_info() {
-    echo -e "${BLUE}ℹ $1${NC}"
-}
-
-# Check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
-
-# Install Go
 install_go() {
     print_info "Installing Go..."
 
@@ -39,7 +20,10 @@ install_go() {
         return 0
     fi
 
-    local go_version="1.21.5"
+    local go_version
+    go_version=$(get_latest_go_version)
+    print_info "Latest Go version: $go_version"
+
     local arch=$(dpkg --print-architecture)
     case "$arch" in
         x86_64|amd64) arch="amd64" ;;
@@ -47,28 +31,31 @@ install_go() {
         *) arch="amd64" ;;
     esac
 
-    # Install prerequisites
+    ensure_apt_updated
     sudo apt-get install -y curl wget
 
-    # Download and install Go
-    curl -L "https://go.dev/dl/go${go_version}.linux-${arch}.tar.gz" -o go.tar.gz
-    sudo rm -rf /usr/local/go
-    sudo tar -C /usr/local -xzf go.tar.gz
-    rm go.tar.gz
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
 
-    # Add to PATH if not already there
-    if ! grep -q "/usr/local/go/bin" ~/.bashrc 2>/dev/null; then
+    curl -L "https://go.dev/dl/go${go_version}.linux-${arch}.tar.gz" -o "$tmp_dir/go.tar.gz"
+    sudo rm -rf /usr/local/go
+    sudo tar -C /usr/local -xzf "$tmp_dir/go.tar.gz"
+    rm -rf "$tmp_dir"
+
+    if [ -f "$HOME/.bashrc" ] && ! grep -q "/usr/local/go/bin" ~/.bashrc 2>/dev/null; then
         echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+    fi
+    if [ -f "$HOME/.zshrc" ] && ! grep -q "/usr/local/go/bin" ~/.zshrc 2>/dev/null; then
+        echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.zshrc
     fi
     export PATH=$PATH:/usr/local/go/bin
 
-    if command_exists go; then
-        print_success "Go installed successfully: $(go version)"
+    if [ -f /usr/local/go/bin/go ]; then
+        print_success "Go installed successfully: $(/usr/local/go/bin/go version)"
     else
         print_error "Go installation failed"
         return 1
     fi
 }
 
-# Main execution
 install_go

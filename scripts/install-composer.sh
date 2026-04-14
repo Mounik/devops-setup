@@ -5,54 +5,46 @@
 
 set -euo pipefail
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
-# Print functions
-print_success() {
-    echo -e "${GREEN}✓ $1${NC}"
-}
-
-print_error() {
-    echo -e "${RED}✗ $1${NC}"
-}
-
-print_info() {
-    echo -e "${BLUE}ℹ $1${NC}"
-}
-
-# Check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
-
-# Install Composer
 install_composer() {
     print_info "Installing Composer..."
 
     if command_exists composer; then
-        print_success "Composer is already installed: $(composer --version)"
+        print_success "Composer is already installed: $(composer --version | head -1)"
         return 0
     fi
 
-    # Install prerequisites
-    sudo apt-get install -y curl php-cli
+    if ! command_exists php; then
+        print_info "PHP not found, installing PHP first..."
+        if [ -f "$SCRIPT_DIR/install-php.sh" ]; then
+            bash "$SCRIPT_DIR/install-php.sh"
+        else
+            print_error "PHP is required for Composer. Please install PHP first."
+            return 1
+        fi
+    fi
 
-    # Download and install Composer
-    curl -sS https://getcomposer.org/installer | php
-    sudo mv composer.phar /usr/local/bin/composer
+    ensure_apt_updated
+    sudo apt-get install -y curl php-cli php-mbstring php-xml php-curl
+
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+
+    cd "$tmp_dir"
+    curl -sS https://getcomposer.org/installer | php -- --install-dir="$tmp_dir" --filename=composer
+    sudo mv "$tmp_dir/composer" /usr/local/bin/composer
+    sudo chmod +x /usr/local/bin/composer
+    cd - > /dev/null
+    rm -rf "$tmp_dir"
 
     if command_exists composer; then
-        print_success "Composer installed successfully: $(composer --version)"
+        print_success "Composer installed successfully: $(composer --version | head -1)"
     else
         print_error "Composer installation failed"
         return 1
     fi
 }
 
-# Main execution
 install_composer

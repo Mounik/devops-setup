@@ -5,57 +5,36 @@
 
 set -euo pipefail
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
-# Print functions
-print_success() {
-    echo -e "${GREEN}✓ $1${NC}"
-}
-
-print_error() {
-    echo -e "${RED}✗ $1${NC}"
-}
-
-print_info() {
-    echo -e "${BLUE}ℹ $1${NC}"
-}
-
-# Check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
-
-# Install AWS CLI
 install_aws_cli() {
     print_info "Installing AWS CLI..."
 
     if command_exists aws; then
-        print_success "AWS CLI is already installed: $(aws --version)"
+        print_success "AWS CLI is already installed: $(aws --version | head -1)"
         return 0
     fi
 
-    # Install prerequisites
-    sudo apt-get update -qq
+    ensure_apt_updated
     sudo apt-get install -y curl unzip
 
-    # Download and install AWS CLI v2
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-$(dpkg --print-architecture).zip" -o "awscliv2.zip"
-    unzip awscliv2.zip
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-$(dpkg --print-architecture).zip" -o "$tmp_dir/awscliv2.zip"
+    cd "$tmp_dir"
+    unzip -o awscliv2.zip
     sudo ./aws/install
-    rm -rf aws awscliv2.zip
+    cd - > /dev/null
+    rm -rf "$tmp_dir"
 
     if command_exists aws; then
-        print_success "AWS CLI installed successfully: $(aws --version)"
+        print_success "AWS CLI installed successfully: $(aws --version | head -1)"
     else
         print_error "AWS CLI installation failed"
         return 1
     fi
 }
 
-# Main execution
 install_aws_cli
